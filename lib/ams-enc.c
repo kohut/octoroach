@@ -35,214 +35,156 @@
  *
  * Revisions:
  *  Duncan Haldane      2012-05-15    Initial release
+ *  Andrew Pullin       2012-07-05    Ported to use i2c_driver module
  *                      
  * Notes:
  *  - This module uses the I2C1 port for communicating with the AMS encoder chips
  */
+#include "i2c_driver.h"
 #include "i2c.h"
 #include "ams-enc.h"
 #include "utils.h"
-#include "i2c_driver.h"
+
+#define ENC_ADDR_R_RD 0b10000011		//A1 on AS5048B Pulled High, A2 Low
+#define ENC_ADDR_R_WR 0b10000010
+
+#define ENC_ADDR_L_RD 0b10000101		//A2 on AS5048B Pulled High, A1 Low
+#define ENC_ADDR_L_WR 0b10000100
+
+#define ENC_ADDR_AUX1_RD 0b10000001		//A1, A2 = low
+#define ENC_ADDR_AUX1_WR 0b10000000
+
+#define LSB2ENCDEG 0.0219
 
 #define ENC_I2C_CHAN        1 //Encoder is on I2C channel 1
 
-typedef struct {unsigned short RPOS;				//Leg position struct
-				unsigned short LPOS;} ENCPOS;
-	
+typedef struct {
+    unsigned short RPOS; //Leg position struct
+    unsigned short LPOS;
+} ENCPOS;
+
 ENCPOS encPos;
-
-
 
 /*-----------------------------------------------------------------------------
  *          Declaration of static functions
 -----------------------------------------------------------------------------*/
-static inline void encSendByte( unsigned char byte );
-static inline unsigned char encReceiveByte(void);
-static inline void encStartTx(void);
-static inline void encEndTx(void);
 static inline void encoderSetupPeripheral(void);
 
 /*-----------------------------------------------------------------------------
  *          Public functions
 -----------------------------------------------------------------------------*/
-void encSetup(void){
-	//setup I2C port I2C1
-	encoderSetupPeripheral();
+void encSetup(void) {
+    //setup I2C port I2C1
+    encoderSetupPeripheral();
+
 }
 
 /*****************************************************************************
-* Function Name : encGetRPos
-* Description   : Read the angular position of the right encoder, write to struct encPos
-* Parameters    : None
-* Return Value  : None
-*****************************************************************************/
-void encGetRPos(void){
-	
-	unsigned char enc_data_r1, enc_data_r2;
+ * Function Name : encGetRPos
+ * Description   : Read the angular position of the right encoder, write to struct encPos
+ * Parameters    : None
+ * Return Value  : None
+ *****************************************************************************/
+void encGetRPos(void) {
 
-	unsigned char rpos;
-	
-	encStartTx();				//read first register
-	encSendByte(ENC_ADDR_R_WR);
-	encSendByte(ENC_REG_ANGLE_HI);
-	encEndTx();
-	encStartTx();
-	encSendByte(ENC_ADDR_R_RD);
-	enc_data_r1 = encReceiveByte();
-	encEndTx();
-	
-	encStartTx();				//read second register
-	encSendByte(ENC_ADDR_R_WR);
-	encSendByte(ENC_REG_ANGLE_LOW);
-	encEndTx();
-	encStartTx();
-	encSendByte(ENC_ADDR_R_RD);
-	enc_data_r2 = encReceiveByte();
-	encEndTx();
-	
-	rpos = ((enc_data_r2<<6)+(enc_data_r1&0x3F)); //concatenate registers
-	encPos.RPOS = rpos;
-	
-	return;
+    unsigned char enc_data_r1, enc_data_r2;
+
+    unsigned char rpos;
+
+    i2cStartTx(ENC_I2C_CHAN); //read first register
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_R_WR);
+    i2cSendByte(ENC_I2C_CHAN, 0xFE);
+    i2cEndTx(ENC_I2C_CHAN);
+    i2cStartTx(ENC_I2C_CHAN);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_R_RD);
+    enc_data_r1 = i2cReceiveByte(ENC_I2C_CHAN);
+    i2cEndTx(ENC_I2C_CHAN);
+
+    i2cStartTx(ENC_I2C_CHAN); //read second register
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_R_WR);
+    i2cSendByte(ENC_I2C_CHAN, 0xFF);
+    i2cEndTx(ENC_I2C_CHAN);
+    i2cStartTx(ENC_I2C_CHAN);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_R_RD);
+    enc_data_r2 = i2cReceiveByte(ENC_I2C_CHAN);
+    i2cEndTx(ENC_I2C_CHAN);
+
+    rpos = ((enc_data_r2 << 6)+(enc_data_r1 & 0x3F)); //concatenate registers
+    encPos.RPOS = rpos;
+
+    return;
 }
 
 /*****************************************************************************
-* Function Name : encGetLPos
-* Description   : Read the angular position of the left encoder, write to struct encPos
-* Parameters    : None
-* Return Value  : None
-*****************************************************************************/
-void encGetLPos(void){
-	
-	unsigned char enc_data_r1, enc_data_r2;
-	unsigned short lpos;
-	
-	encStartTx();				//read first register
-	encSendByte(ENC_ADDR_L_WR);
-	encSendByte(0xFE);
-	encEndTx();
-	encStartTx();
-	encSendByte(ENC_ADDR_L_RD);
-	enc_data_r1 = encReceiveByte();
-	encEndTx();
-	
-	encStartTx();				//read second register
-	encSendByte(ENC_ADDR_L_WR);
-	encSendByte(0xFF);
-	encEndTx();
-	encStartTx();
-	encSendByte(ENC_ADDR_L_RD);
-	enc_data_r2 = encReceiveByte();
-	encEndTx();
-	
-	lpos = ((enc_data_r2<<6)+(enc_data_r1&0x3F)); //concatenate registers
-	encPos.LPOS = lpos;
-	
-	return;
+ * Function Name : encGetLPos
+ * Description   : Read the angular position of the left encoder, write to struct encPos
+ * Parameters    : None
+ * Return Value  : None
+ *****************************************************************************/
+void encGetLPos(void) {
+
+    unsigned char enc_data_r1, enc_data_r2;
+    unsigned short lpos;
+
+    i2cStartTx(ENC_I2C_CHAN); //read first register
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_L_WR);
+    i2cSendByte(ENC_I2C_CHAN, 0xFE);
+    i2cEndTx(ENC_I2C_CHAN);
+    i2cStartTx(ENC_I2C_CHAN);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_L_RD);
+    enc_data_r1 = i2cReceiveByte(ENC_I2C_CHAN);
+    i2cEndTx(ENC_I2C_CHAN);
+
+    i2cStartTx(ENC_I2C_CHAN); //read second register
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_L_WR);
+    i2cSendByte(ENC_I2C_CHAN, 0xFF);
+    i2cEndTx(ENC_I2C_CHAN);
+    i2cStartTx(ENC_I2C_CHAN);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_L_RD);
+    enc_data_r2 = i2cReceiveByte(ENC_I2C_CHAN);
+    i2cEndTx(ENC_I2C_CHAN);
+
+    lpos = ((enc_data_r2 << 6)+(enc_data_r1 & 0x3F)); //concatenate registers
+    encPos.LPOS = lpos;
+
+    return;
 }
 
 /*****************************************************************************
-* Function Name : encGetAux1Pos
-* Description   : Read the angular position of the 1st auxiliary encoder
-* Parameters    : None
-* Return Value  : None
-*****************************************************************************/
-float encGetAux1Pos(void){
-	
-	/*unsigned char enc_data_r1, enc_data_r2;
+ * Function Name : encGetAux1Pos
+ * Description   : Read the angular position of the 1st auxiliary encoder
+ * Parameters    : None
+ * Return Value  : None
+ *****************************************************************************/
+float encGetAux1Pos(void) {
 
-	//unsigned char apos;
-	float apos;
-	
-	encStartTx();				//read first register
-	encSendByte(ENC_ADDR_AUX1_WR);
-	encSendByte(ENC_REG_ANGLE_HI); 
-	encEndTx();
-	encStartTx();
-	encSendByte(ENC_ADDR_AUX1_RD);
-	enc_data_r1 = encReceiveByte();
-	encEndTx();
-	
-	encStartTx();				//read second register
-	encSendByte(ENC_ADDR_AUX1_WR);
-	encSendByte(ENC_REG_ANGLE_LOW);
-	//encSendByte(0xFF);
-	encEndTx();
-	encStartTx();
-	encSendByte(ENC_ADDR_AUX1_RD);
-	enc_data_r2 = encReceiveByte();
-	encEndTx();
-	
-	apos = ((enc_data_r2<<6)+(enc_data_r1&0x3F))*LSB2ENCDEG; //concatenate registers
+    unsigned char enc_data_r1, enc_data_r2;
 
-	
-	if (apos >= ZEROANGLE){
-		apos = apos - ZEROANGLE;
-	}
-	else {
-		apos = apos + 360.0 - ZEROANGLE; 
-    }   
-	 	*/
+    //unsigned char apos;
+    float apos;
 
-	unsigned char enc_data_r1, enc_data_r2;
+    i2cStartTx(ENC_I2C_CHAN); //read first register
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_WR);
+    i2cSendByte(ENC_I2C_CHAN, 0xFE);
+    i2cEndTx(ENC_I2C_CHAN);
+    i2cStartTx(ENC_I2C_CHAN);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_RD);
+    enc_data_r1 = i2cReceiveByte(ENC_I2C_CHAN);
+    i2cEndTx(ENC_I2C_CHAN);
 
-		//unsigned char apos;
-	float apos;
-		
-	i2cStartTx(ENC_I2C_CHAN);				//read first register
-	i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_WR);
-	i2cSendByte(ENC_I2C_CHAN, 0xFE);
-	i2cEndTx(ENC_I2C_CHAN);
-	i2cStartTx(ENC_I2C_CHAN);
-	i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_RD);
-	enc_data_r1 = i2cReceiveByte(ENC_I2C_CHAN);
-	i2cEndTx(ENC_I2C_CHAN);
-		
-	i2cStartTx(ENC_I2C_CHAN);				//read second register
-	i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_WR);
-	i2cSendByte(ENC_I2C_CHAN, 0xFF);
-	i2cEndTx(ENC_I2C_CHAN);
-	i2cStartTx(ENC_I2C_CHAN);
-	i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_RD);
-	enc_data_r2 = i2cReceiveByte(ENC_I2C_CHAN);
-	i2cEndTx(ENC_I2C_CHAN);
-		
-	apos = ((enc_data_r2<<6)+(enc_data_r1&0x3F))*LSB2ENCDEG; //concatenate registers
+    i2cStartTx(ENC_I2C_CHAN); //read second register
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_WR);
+    i2cSendByte(ENC_I2C_CHAN, 0xFF);
+    i2cEndTx(ENC_I2C_CHAN);
+    i2cStartTx(ENC_I2C_CHAN);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_RD);
+    enc_data_r2 = i2cReceiveByte(ENC_I2C_CHAN);
+    i2cEndTx(ENC_I2C_CHAN);
 
-	
+    apos = ((enc_data_r2 << 6)+(enc_data_r1 & 0x3F)) * LSB2ENCDEG; //concatenate registers
 
-	apos = apos - ZEROANGLE;
-
-	if (apos <= -180.0){
-		apos = apos + 360.0;
-	}
-	
-	i2cError(ENC_I2C_CHAN);
-
-	return apos;
+    return apos;
 }
-
-
-/* Read diagnostics from Encoder Chip. NK */
-
-unsigned char encGetDiagnostics(void) {
-
-	unsigned char enc_data_diag = 0;
-
-	encStartTx();			//	read first register
-	encSendByte(ENC_ADDR_AUX1_WR);
-	encSendByte(ENC_REG_DIAG); 
-	encEndTx();
-	encStartTx();
-	encSendByte(ENC_ADDR_AUX1_RD);
-	enc_data_diag = encReceiveByte();
-	encEndTx();
-	
-	return enc_data_diag;
-}
-
-	
-
 
 /*-----------------------------------------------------------------------------
  * ----------------------------------------------------------------------------
@@ -251,73 +193,22 @@ unsigned char encGetDiagnostics(void) {
  * ----------------------------------------------------------------------------
 -----------------------------------------------------------------------------*/
 
-
-
 /*****************************************************************************
-* Function Name : encSendByte
-* Description   : Send a byte over to the encoder
-* Parameters    : byte - a byte to send
-* Return Value  : None
-*****************************************************************************/
-static inline void encSendByte( unsigned char byte ) {
-    MasterWriteI2C1(byte);
-    while(I2C1STATbits.TRSTAT);
-    while(I2C1STATbits.ACKSTAT);
-}
-
-
-/*****************************************************************************
-* Function Name : encReceiveByte
-* Description   : Receive a byte from the encoder
-* Parameters    : None
-* Return Value  : None
-*****************************************************************************/
-static inline unsigned char encReceiveByte(void) {
-    return MasterReadI2C1();
-}
-
-/*****************************************************************************
-* Function Name : encStartTx
-* Description   : Start I2C transmission
-* Parameters    : None
-* Return Value  : None
-*****************************************************************************/
-static inline void encStartTx(void){
-    StartI2C1();
-    while(I2C1CONbits.SEN);
-}
-
-/*****************************************************************************
-* Function Name : encEndTx
-* Description   : End I2C transmission
-* Parameters    : None
-* Return Value  : None
-*****************************************************************************/
-static inline void encEndTx(void){
-    StopI2C1();
-    while(I2C1CONbits.PEN);
-}
-
-/*****************************************************************************
-* Function Name : encoderSetupPeripheral
-* Description   : Setup I2C for encoders
-* Parameters    : None
-* Return Value  : None
-*****************************************************************************/
-static inline void encoderSetupPeripheral(void) {		//same setup as ITG3200 for compatibility
+ * Function Name : encoderSetupPeripheral
+ * Description   : Setup I2C for encoders
+ * Parameters    : None
+ * Return Value  : None
+ *****************************************************************************/
+static inline void encoderSetupPeripheral(void) { //same setup as ITG3200 for compatibility
     unsigned int I2C1CONvalue, I2C1BRGvalue;
     I2C1CONvalue = I2C1_ON & I2C1_IDLE_CON & I2C1_CLK_HLD &
-                   I2C1_IPMI_DIS & I2C1_7BIT_ADD & I2C1_SLW_DIS &
-                   I2C1_SM_DIS & I2C1_GCALL_DIS & I2C1_STR_DIS &
-                   I2C1_NACK & I2C1_ACK_DIS & I2C1_RCV_DIS &
-                   I2C1_STOP_DIS & I2C1_RESTART_DIS & I2C1_START_DIS;
+            I2C1_IPMI_DIS & I2C1_7BIT_ADD & I2C1_SLW_DIS &
+            I2C1_SM_DIS & I2C1_GCALL_DIS & I2C1_STR_DIS &
+            I2C1_NACK & I2C1_ACK_DIS & I2C1_RCV_DIS &
+            I2C1_STOP_DIS & I2C1_RESTART_DIS & I2C1_START_DIS;
 
     // BRG = Fcy(1/Fscl - 1/10000000)-1, Fscl = 909KHz 	
     I2C1BRGvalue = 39;
- 	
     OpenI2C1(I2C1CONvalue, I2C1BRGvalue);
     IdleI2C1();
-
 }
-
-

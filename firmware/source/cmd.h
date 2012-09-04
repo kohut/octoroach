@@ -90,7 +90,7 @@ typedef struct{
 
 //cmdSetCtrldTurnRate
 typedef struct{
-	int rate;
+	int steerInput;
 } _args_cmdSetCtrldTurnRate;
 
 //cmdGetImuLoopZGyro

@@ -371,8 +371,6 @@ static void cmdSetThrustClosedLoop(unsigned char status, unsigned char length, u
     hallPIDSetInput(1 , argsPtr->chan1, argsPtr->runtime2);
     hallPIDOn(1);
 #else
-    //_args_cmdSetThrustClosedLoop* argsPtr =
-    //        (_args_cmdSetThrustClosedLoop*) (frame);
     PKT_UNPACK(_args_cmdSetThrustClosedLoop, argsPtr, frame);
 
     legCtrlSetInput(LEG_CTRL_LEFT, argsPtr->chan1);
@@ -416,19 +414,14 @@ static void cmdGetPIDTelemetry(unsigned char status, unsigned char length, unsig
 }
 
 static void cmdSetCtrldTurnRate(unsigned char status, unsigned char length, unsigned char *frame) {
-    int rate;
     Payload pld;
-    rate = frame[0] + (frame[1] << 8);
-    steeringSetAngRate(rate);
+    PKT_UNPACK(_args_cmdSetCtrldTurnRate, argsPtr, frame);
+    steeringSetInput(argsPtr->steerInput);
 
-    //Send confirmation packet
-    pld = payCreateEmpty(2);
-    //pld->pld_data[0] = status;
-    //pld->pld_data[1] = CMD_SET_CTRLD_TURN_RATE;
-    memcpy((pld->pld_data) + 2, frame, sizeof (int));
-    payAppendData(pld, 0, sizeof (rate), (unsigned char*) (&rate));
-    paySetStatus(pld, status);
-    paySetType(pld, CMD_SET_CTRLD_TURN_RATE);
+    pld = payCreateEmpty(sizeof(_args_cmdSetCtrldTurnRate));
+    pld->pld_data[0] = status;
+    pld->pld_data[1] = CMD_SET_CTRLD_TURN_RATE;
+    memcpy((pld->pld_data) + 2, frame, sizeof(_args_cmdSetCtrldTurnRate));
     radioSendPayload((WordVal) macGetDestAddr(), pld);
 }
 
@@ -463,13 +456,9 @@ static void cmdSetMoveQueue(unsigned char status, unsigned char length, unsigned
 //
 
 static void cmdSetSteeringGains(unsigned char status, unsigned char length, unsigned char *frame) {
-    //int Kp, Ki, Kd, Kaw, ff;
-    //  int steerMode;
-    //    int idx = 0;
     Payload pld;
 
     PKT_UNPACK(_args_cmdSetSteeringGains, argsPtr, frame);
-    //_args_cmdSetSteeringGains* argsPtr = (_args_cmdSetSteeringGains*) (frame);
 
     steeringSetGains(argsPtr->Kp, argsPtr->Ki, argsPtr->Kd, argsPtr->Kaw, argsPtr->Kff);
     steeringSetMode(argsPtr->steerMode);
@@ -577,30 +566,8 @@ static void cmdHallTelemetry(unsigned char status, unsigned char length, unsigne
     //TODO: Integration of hall telemetry is unfinished. Fuction will currently
     // do nothing.
 
-    PKT_UNPACK(_args_cmdHallTelemetry, argsPtr, frame);
-
-    //start time = argsPtr->startDealy + getT1_ticks();
-    //telemSetSkip(argsPtr->skip);
-    //telemSetSamplesToSave(argsPtr->count);
-    //swatchReset(); //This should probably be done within the telem module!
-
-    //int idx = 0;
-    //unsigned long temp;
-    //TelemControl.count = frame[idx] + (frame[idx + 1] << 8);
-    //idx += 2;
-    // start time is relative to current t1_ticks
-    //temp = t1_ticks; // need atomic read due to interrupts
-    //TelemControl.start =
-    //        (unsigned long) (frame[idx] + (frame[idx + 1] << 8))
-    //        + temp;
-    //idx += 2;
-    //samplesToSave = TelemControl.count; // **** this runs sample capture in T5 interrupt
-    
-    //TelemControl.skip = frame[idx]+(frame[idx + 1] << 8);
-    //swatchReset();
-    //if (TelemControl.count > 0) {
-    //    TelemControl.onoff = 1; // use just steering servo sample capture
-    //} // enable telemetry last
+    //This is only commented to supress the warning
+    //PKT_UNPACK(_args_cmdHallTelemetry, argsPtr, frame);
      
 }
 
