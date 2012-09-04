@@ -190,10 +190,10 @@ static void telemISRHandler() {
             data.telemStruct.timeStamp = (long) swatchTic();
             data.telemStruct.inputL = motor_pidObjs[0].input;
             data.telemStruct.inputR = motor_pidObjs[1].input;
-            //data.telemStruct.dcL = PDC3;
-            //data.telemStruct.dcR = PDC4;
-            data.telemStruct.dcL = PDC1;
-            data.telemStruct.dcR = PDC2;
+            data.telemStruct.dcL = PDC3;
+            data.telemStruct.dcR = PDC4;
+            //data.telemStruct.dcL = PDC1;
+            //data.telemStruct.dcR = PDC2;
             data.telemStruct.gyroX = imuGetGyroXValue();
             data.telemStruct.gyroY = imuGetGyroYValue();
             data.telemStruct.gyroZ = imuGetGyroZValue();

@@ -72,10 +72,10 @@
         <itemPath>../../imageproc-lib/dfmem.c</itemPath>
         <itemPath>../../imageproc-lib/i2c_driver.c</itemPath>
         <itemPath>../../imageproc-lib/dfilter_avg.c</itemPath>
-        <itemPath>../../imageproc-lib/gyro.c</itemPath>
         <itemPath>../../imageproc-lib/pid_hw.c</itemPath>
         <itemPath>../../imageproc-lib/pid.c</itemPath>
         <itemPath>../../imageproc-lib/version.c</itemPath>
+        <itemPath>../../imageproc-lib/gyro.c</itemPath>
       </logicalFolder>
       <logicalFolder name="lib" displayName="lib" projectFiles="true">
         <itemPath>../../imageproc-lib/delay.s</itemPath>
@@ -131,7 +131,7 @@
       </compileType>
       <makeCustomizationType>
         <makeCustomizationPreStepEnabled>true</makeCustomizationPreStepEnabled>
-        <makeCustomizationPreStep>python ..\..\imageproc-lib\version.py APULLIN-TAYLROACH-DEVEL;PID-HARD;STEER-HARD;TAIL-HARD</makeCustomizationPreStep>
+        <makeCustomizationPreStep>python ..\..\imageproc-lib\version.py NKOHUT-TAYLROACH-DEVEL;PID-HARD;STEER-HARD;TAIL-HARD</makeCustomizationPreStep>
         <makeCustomizationPostStepEnabled>false</makeCustomizationPostStepEnabled>
         <makeCustomizationPostStep></makeCustomizationPostStep>
         <makeCustomizationPutChecksumInUserID>false</makeCustomizationPutChecksumInUserID>
