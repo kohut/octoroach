@@ -56,7 +56,7 @@ def main():
     #
     #steeringGains = [5000,0,0,0,0,  STEER_MODE_DECREASE] # Disables steering controller
     #steeringGains = [20,1,0,1,0,  STEER_MODE_DECREASE]
-    steeringGains = [500,10,0,0,0,  STEER_MODE_DECREASE] # Hardware PID
+    steeringGains = [50,10,0,0,0,  STEER_MODE_DECREASE] # Hardware PID
     #steeringGains = [0000,0,0,0,0,  STEER_MODE_DECREASE] 
     setSteeringGains(steeringGains)
     setSteeringRate(0)
@@ -70,36 +70,109 @@ def main():
     time.sleep(1)
 
 
+    
+
+    # Gyro Control Experiment ###############################
+
+    #exp_time = 1000
+
+    #start_angle = -90
+
+    #throttle = 300
+
+    #tailq_init = [2, \
+    #         0, exp_time, TAIL_SEG_CONSTANT, 0, 0, 0,
+    #         0, exp_time, TAIL_SEG_RAMP, start_angle*10, 0, 0
+    #         ]
+    
+    #moves = 3
+    #moveq = [moves, \
+    #         throttle, throttle, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 0,
+    #         throttle, throttle, exp_time/2, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_OFF, 0,
+    #         throttle, throttle, exp_time/2, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 0
+    #         ]
+
+ 
+
+    # Tail range of motion is between 140 and -125 deg! do not exceed
+    #tailq = [moves, \
+    #         start_angle, exp_time, TAIL_SEG_CONSTANT, 0, 0, 0,
+    #         0, exp_time/2, TAIL_GYRO_CONTROL, -90, 0, 0,
+    #         0, exp_time/2, TAIL_SEG_IDLE, 0, 0, 0
+    #         ]
+
+#################################################33
+
+
+# Friction Experiments
+
     exp_time = 1000
 
-    start_angle = -45
-	
-    #Constant example
-    moves = 5
-    moveq = [moves, \
-             0, 0, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_OFF, 0,
-             0, 0, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_INCREASE, 0,
-             300, 300, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_OFF, 0,
-             300, 300, exp_time/2, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 0,
-             300, 300, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_OFF, 0
+    tailTime = 150
+
+    start_angle = -90
+
+    throttle = 0
+
+    init_moves = 2
+
+    tailq_init = [init_moves, \
+            0, exp_time, TAIL_SEG_CONSTANT, 0, 0, 0,
+            0, exp_time, TAIL_SEG_RAMP, start_angle*10, 0, 0
              ]
 
-    #tmoves = 1
+    moveq_init = [init_moves, \
+             throttle, throttle, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 0,
+             throttle, throttle, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 0
+             ]
+    
+    moves = 3
+    moveq = [moves, \
+             throttle, throttle, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 0,
+             throttle, throttle, tailTime, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_OFF, 0,
+             throttle, throttle, exp_time/2, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_OFF, 0
+             ]
+
+ 
 
     # Tail range of motion is between 140 and -125 deg! do not exceed
     tailq = [moves, \
-             0, exp_time, TAIL_SEG_CONSTANT, 0, 0, 0,
-             0, exp_time, TAIL_SEG_RAMP, start_angle*10, 0, 0,
-             start_angle, exp_time, TAIL_SEG_CONSTANT, 0, 0, 0,
-             0, exp_time/2, TAIL_SEG_CONSTANT, 0, 0, 0,
-             0, exp_time, TAIL_SEG_IDLE, 0, 0, 0
+             start_angle, exp_time/10, TAIL_SEG_CONSTANT, 0, 0, 0,
+             0, tailTime, TAIL_GYRO_CONTROL, -100, 0, 0,
+             0, exp_time/2, TAIL_SEG_IDLE, 0, 0, 0
              ]
 
-    moves = 2
+    ######################################3
+
+
+    # Friction Experiments - going straight up hill
+
+    #exp_time = 5000
+
+   
+
+    #start_angle = -90
+
+    #throttle = 400
+
     
-    moveq = [moves, \
-             300, 300, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 0,
-             200, 200, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 20]
+    
+    #moves = 1
+    #moveq = [moves, \
+     #        throttle, throttle, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE,0
+    #                ]
+
+ 
+
+    ######################################3
+
+
+
+    #moves = 2
+    
+    #moveq = [moves, \
+     #        300, 300, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 0,
+     #        200, 200, exp_time, MOVE_SEG_CONSTANT, 0, 0, 0, STEER_MODE_DECREASE, 20]
 
     
 
@@ -149,7 +222,9 @@ def main():
     # Pause and wait to start run, including leadin time
     raw_input("Press enter to start run ...")
     
-    
+    sendTailQueue(tailq_init)
+    #sendMoveQueue(moveq_init)
+    time.sleep(2)
     # Trigger telemetry save, which starts as soon as it is received
     if SAVE_DATA:
         startTelemetrySave(numSamples)
@@ -157,8 +232,9 @@ def main():
     time.sleep(shared.leadinTime / 1000.0)
     #Send the move queue to the robot; robot will start processing it
     #as soon as it is received
-    sendMoveQueue(moveq)
-    #sendTailQueue(tailq)
+    
+    #sendMoveQueue(moveq)
+    sendTailQueue(tailq)
     
     #Clear loop
     #time.sleep(6)

@@ -2,6 +2,6 @@
 
 #include "version.h"
 
-static char version[] = "NKOHUT-TAYLROACH-DEVEL;PID-HARD;STEER-HARD;TAIL-HARD: Thu Aug 16 18:17:00 2012";
+static char version[] = "NKOHUT-TAYLROACH-DEVEL;PID-HARD;STEER-HARD;TAIL-HARD: Thu Aug 30 19:49:24 2012";
 
 char* versionGetString(void) { return version; }

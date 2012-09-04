@@ -58,8 +58,10 @@ float bodyPosition = 0.0;
 //float dt = 0.001;
 // how do I get this from python
 float refBodyPosition = 0.0;
+float initialBodyPosition = 0.0;
 int gyroCtrlTorque;
 int tailCtrlFlag = 0;
+
  
 
 //Function to be installed into T1, and setup function
@@ -152,6 +154,7 @@ static void serviceTailQueue(void) {
         //tailInMotion = 1;
         if ((currentTail == idleTail) || (getT1_ticks() >= tailExpire)) {
             currentTail = tailqPop(tailq); //grabs top command from tail queue
+            initialBodyPosition = imuGetBodyZPositionDeg();
             tailExpire = getT1_ticks() + currentTail->duration;
             currentTailStart = getT1_ticks();
 
@@ -223,12 +226,8 @@ static void tailSynth() {
 
 
 			refBodyPosition = (float) currentTail->params[0];
-			
-		
-
-                        
-
-			bodyPosition = imuGetBodyZPositionDeg();
+                            // nothing
+			bodyPosition = imuGetBodyZPositionDeg();// - initialBodyPosition;
 
 			if (bodyPosition < (refBodyPosition - bodyPosDeadband)) {
 				gyroCtrlTorque = POS; 

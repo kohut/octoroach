@@ -111,7 +111,6 @@ int imuGetGyroZValue() {
     return lastGyroZValue;
 }
 
-
 float imuGetGyroXValueDeg() {
     return lastGyroXValueDeg;
 }
