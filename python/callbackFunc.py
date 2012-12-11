@@ -14,7 +14,6 @@ pktFormat = { \
     command.SET_PID_GAINS:          '10h', \
     command.GET_PID_TELEMETRY:      '', \
     command.SET_CTRLD_TURN_RATE:    '=h', \
-    command.GET_IMU_LOOP_ZGYRO:     '='+2*'Lhhh', \
     command.SET_MOVE_QUEUE:         '', \
     command.SET_STEERING_GAINS:     '6h', \
     command.SOFTWARE_RESET:         '', \

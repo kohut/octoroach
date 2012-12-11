@@ -4,7 +4,6 @@
 #include "timer.h"
 #include "gyro.h"
 #include "steering.h"
-#include "stopwatch.h"
 #include "dfmem.h"
 #include "telem.h"
 #include "move_queue.h"
@@ -95,6 +94,7 @@ void steeringSetup(void) {
 
     //Averaging filter setup:
     //filterAvgCreate(&gyroZavg, GYRO_AVG_SAMPLES);
+    //This is now owned by imu.c
 
     steeringPID.onoff = PID_ON; //OFF by default
 
@@ -118,6 +118,8 @@ void steeringSetMode(unsigned int sm) {
     else{ 
         steeringPID.onoff = PID_ON;
     }
+
+
 
     //Only for RELATIVE turns
     //if ((steeringMode == STEERMODE_YAW_DEC) || (steeringMode == STEERMODE_YAW_DEC))) {

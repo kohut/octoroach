@@ -3,7 +3,6 @@
 #include "led.h"
 #include "gyro.h"
 #include "xl.h"
-#include "stopwatch.h"
 #include "pid.h"
 #include "dfilter_avg.h"
 #include "adc_pid.h"
@@ -16,11 +15,11 @@
 #define TIMER_PERIOD        1/TIMER_FREQUENCY   //This is used for numerical integration
 
 //Setup for Gyro Z averaging filter
-#define GYRO_AVG_SAMPLES 	32
+#define GYRO_AVG_SAMPLES 	8
 
 
 //Filter stuctures for gyro variables
-static filterAvgInt_t gyroZavg;
+static dfilterAvgInt_t gyroZavg;
 
 
 //TODO: change these to arrays
@@ -85,9 +84,9 @@ static void imuISRHandler(){
         lastGyroYValueDeg = (float) (lastGyroYValue*LSB2DEG);
         lastGyroZValueDeg = (float) (lastGyroZValue*LSB2DEG); 
 
-        filterAvgUpdate(&gyroZavg, gyroData[2]);
+        dfilterAvgUpdate(&gyroZavg, gyroData[2]);
 
-        lastGyroZValueAvg = filterAvgCalc(&gyroZavg);
+        lastGyroZValueAvg = dfilterAvgCalc(&gyroZavg);
 
         lastGyroZValueAvgDeg = (float)lastGyroZValueAvg*LSB2DEG;
 
@@ -112,7 +111,7 @@ void imuSetup(){
     int retval;
     retval = sysServiceInstallT4(imuServiceRoutine);
     SetupTimer4();
-    filterAvgCreate(&gyroZavg, GYRO_AVG_SAMPLES);
+    dfilterAvgCreate(&gyroZavg, GYRO_AVG_SAMPLES);
 }
 
 int imuGetGyroXValue() {
@@ -154,4 +153,6 @@ float imuGetBodyZPositionDeg() {
     return lastBodyZPositionDeg;
 }
 
-
+void imuResetGyroZAvg(){
+    filterZero(&gyroZavg);
+}

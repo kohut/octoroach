@@ -16,7 +16,7 @@
 #include "xl.h"
 #include "gyro.h"
 #include "utils.h"
-#include "stopwatch.h"
+#include "sclock.h"
 #include "motor_ctrl.h"
 #include "led.h"
 #include "dfmem.h"
@@ -57,7 +57,7 @@ int main(void) {
     int old_ipl;
     mSET_AND_SAVE_CPU_IP(old_ipl, 1)
 
-    swatchSetup();
+    sclockSetup();
     radioInit(src_addr_init, src_pan_id_init, RADIO_RXPQ_MAX_SIZE, RADIO_TXPQ_MAX_SIZE);
     radioSetChannel(RADIO_CHANNEL); //Set to my channel
     macSetDestAddr(dst_addr_init);
@@ -72,19 +72,19 @@ int main(void) {
     encSetup();
     imuSetup();
 
-// #ifdef  NK 8/14/12
+    #ifdef  HALL_SENSORS
     hallSetup();    // Timer 1, Timer 2
-    //hallSteeringSetup(); //doesn't exist yet
-//#else //No hall sensors, standard BEMF control
+    hallSteeringSetup(); //doesn't exist yet
+    #else //No hall sensors, standard BEMF control
     legCtrlSetup(); // Timer 1
     steeringSetup();  //Timer 5
-//#endif
+    #endif
 
-   tailCtrlSetup(); //////////////////////
+    //Tail control is a special case
+    tailCtrlSetup();
 
+    //Camera is untested with current code base, AP 12/6/2012
     //ovcamSetup();
-
-    //radioReadTrxId(id);
 
     LED_RED = 1; //Red is use an "alive" indicator
     LED_GREEN = 0;

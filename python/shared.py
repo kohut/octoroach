@@ -1,4 +1,3 @@
-
 #Base station
 #BS_COMPORT = 'COM3'
 #BS_BAUDRATE = 230400

@@ -160,7 +160,7 @@ class Robot:
         n = moveq[0]
         if len(moveq[1:]) != n * SEG_LENGTH:
             print "CRITICAL: Move queue length specification invalid."
-            print "Wrong number of entries."
+            print "Wrong number of entries, len(moveq) = ",len(moveque)
             xb_safe_exit()
             
         self.nummoves = n
@@ -332,6 +332,7 @@ class Robot:
             filenum = filenum[-1] + 1
             self.dataFileName = "imudata" + str(filenum) + ".txt"
             
+
 
 ########## Helper functions #################
 

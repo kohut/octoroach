@@ -44,7 +44,7 @@ def main():
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
     
-    motorgains = [20000,5,1,0,10 , 20000,5,1,0,10] #Hardware PID
+    motorgains = [15000,5,0,0,10 , 15000,5,0,0,10] #Hardware PID
 
     R1.setMotorGains(motorgains, retries = 8)
     #Verify all robots have motor gains set
@@ -52,17 +52,16 @@ def main():
 
     #Steering gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff]
-    #steeringGains = [15000,1,0,0,0,  STEER_MODE_DECREASE] # Hardware PID
-    steeringGains = [50,10,0,0,0,  STEER_MODE_DECREASE]
-    
+    steeringGains = [5000,10,0,0,0,  STEER_MODE_DECREASE] # Hardware PID
+
     R1.setSteeringGains(steeringGains, retries = 8)
     #Verify all robots have steering gains set
     verifyAllSteeringGainsSet()  #exits on failure
     
-    tailGains = [8000,20,1000,0,0] #tuned 7/12/12
-    R1.setTailGains(tailGains)
+    #tailGains = [0, 0, 0, 0, 0]
+    #R1.setTailGains(tailGains)
     #Verify all robots have tail gains set
-    verifyAllTailGainsSet()  #exits on failure
+    #verifyAllTailGainsSet()  #exits on failure
     
     # Steering controller setpoint
     #R1.setSteeringRate(0 , retries = 8)
@@ -95,47 +94,26 @@ def main():
     #moveq = [moves, \
     #         135, 135, 10000,   MOVE_SEG_CONSTANT, 0, 0, 0]
              
-    #Ramp example
-    
-    
-    init_moves = 2
+    #YAW control: Straight then -90 degree turn 
     numMoves = 3
-    init_time = 1000
-    exp_time = 1000
-    throttle = 300
-    start_angle = -125.0
-
-    tailq_init = [init_moves, \
-            0.0, init_time, TAIL_SEG_CONSTANT, 0, 0, 0,
-            0.0, init_time, TAIL_SEG_RAMP, start_angle*10, 0, 0
-            ]
-            
-    
-    
     moveq1 = [numMoves, \
-        throttle, throttle, 1.0*exp_time,   MOVE_SEG_CONSTANT, 0,  0,  0, STEER_MODE_INCREASE, int(round(shared.deg2count*0.0)),
-        throttle, throttle, exp_time/3,   MOVE_SEG_CONSTANT, 0,  0,  0, STEER_MODE_OFF, int(round(shared.deg2count*0.0)),
-        throttle, throttle, 1.0*exp_time,   MOVE_SEG_CONSTANT, 0,  0,  0, STEER_MODE_INCREASE, int(round(shared.deg2count*0.0))
-        #2*throttle, 2*throttle, exp_time/2,   MOVE_SEG_CONSTANT, 0,  0,  0, STEER_MODE_OFF, int(round(shared.deg2count*0.0)),
-        #throttle, throttle, exp_time,   MOVE_SEG_CONSTANT, 0,  0,  0, STEER_MODE_SPLIT, int(round(shared.deg2count*0.0))
-        ]
-    tailq = [numMoves, \
-            start_angle, 1.0*exp_time, TAIL_SEG_CONSTANT, 0, 0, 0,
-            00.0, exp_time/3, TAIL_GYRO_CONTROL, -90, 0, 0,
-            00.0, 1.0*exp_time, TAIL_SEG_IDLE, 0, 0, 0
-            #0.0, exp_time/2, TAIL_GYRO_CONTROL, 90, 0, 0,
-            #0.0, exp_time, TAIL_GYRO_CONTROL, 0, 0, 0
-            ]
+        150, 150, 2000,   MOVE_SEG_CONSTANT, 0,  0,  0, STEER_MODE_YAW_SPLIT, int(round(shared.deg2count*0.0)),
+        150, 150, 10000,   MOVE_SEG_CONSTANT, 0,  0,  0, STEER_MODE_YAW_SPLIT, int(round(shared.deg2count*-90.0)),
+        150, 150, 10000,   MOVE_SEG_CONSTANT, 0,  0,  0, STEER_MODE_YAW_SPLIT, int(round(shared.deg2count*0.0))]
+    
+    #No movements, just for static telemetry capture
+    #numMoves = 1
+    #moveq1 = [numMoves, \
+    #    0, 0, 2000,   MOVE_SEG_CONSTANT, 0,  0,  0, STEER_MODE_OFF, 0]    
         
     #Timing settings
     R1.leadinTime = 500;
     R1.leadoutTime = 500;
-    R1.setupImudata(moveq1)
     
     #Flash must be erased to save new data
     if SAVE_DATA1:
         #This needs to be done to prepare the .imudata variables in each robot object
-        
+        R1.setupImudata(moveq1)
         R1.eraseFlashMem()
 
     # Pause and wait to start run, including leadin time
@@ -151,12 +129,6 @@ def main():
     #### Make when saving anything, this if is set ####
     #### to the proper "SAVE_DATA"                 ####
     
-    ####### Initialize tail before experiment
-    R1.sendTailQueue(tailq_init)
-    time.sleep(2.0)
-    ##################
-    
-    
     if SAVE_DATA1:
         R1.startTelemetrySave()
 
@@ -164,7 +136,6 @@ def main():
     #Send the move queue to the robot; robot will start processing it
     #as soon as it is received
     R1.sendMoveQueue(moveq1)
-    R1.sendTailQueue(tailq)
     
     maxtime = 0
     for r in shared.ROBOTS:
@@ -175,10 +146,9 @@ def main():
     #Wait for robots to do runs
     time.sleep(maxtime / 1000.0)
     
-    
+    raw_input("Press Enter to start telemtry readback ...")
     
     if SAVE_DATA1:
-        raw_input("Press Enter to start telemtry readback ...")
         R1.downloadTelemetry()
 
     if EXIT_WAIT:  #Pause for a Ctrl + Cif specified
