@@ -25,10 +25,15 @@
 #define ZERO 0
 
 #define MAXTAILPOSITION 130.0
-#define MINTAILPOSITION -115.0
+#define MINTAILPOSITION -130.0
 
 //#define MAXTAILPOSITION 120.0
 //#define MINTAILPOSITION -100.0
+
+// SAFETY IS OFF!!!!!!!!!!!!!!!!!!1
+//#define MAXTAILPOSITION 180.0
+//#define MINTAILPOSITION -180.0
+
 
 
 //PID container objects
@@ -227,7 +232,7 @@ static void tailSynth() {
 
 			refBodyPosition = (float) currentTail->params[0];
                             // nothing
-			bodyPosition = imuGetBodyZPositionDeg();// - initialBodyPosition;
+			bodyPosition = imuGetBodyZPositionDeg() - initialBodyPosition;
 
 			if (bodyPosition < (refBodyPosition - bodyPosDeadband)) {
 				gyroCtrlTorque = POS; 

@@ -129,7 +129,7 @@ class Robot:
     def setTailGains(self, gains, retries = 8):
         tries = 1
         self.tailGains = gains
-        while not (self.steering_gains_set) and (tries <= retries):
+        while not (self.tail_gains_set) and (tries <= retries):
             self.clAnnounce()
             print "Setting TAIL gains...   ",tries,"/8"
             self.tx( 0, command.SET_TAIL_GAINS, pack('5h',*gains))
@@ -220,7 +220,7 @@ class Robot:
             packet = [numToSend]
             packet.extend(toSend)    #Full moveq format to be given to pack()
             #Actual TX
-            self.tx( 0, command.SET_TAIL_QUEUE, pack('=h'+numToSend*'hLhhhh', *packet))
+            self.tx( 0, command.SET_TAIL_QUEUE, pack('=h'+numToSend*'fLhhhh', *packet))
             time.sleep(0.01)                #simple holdoff, probably not neccesary
             segments = segments[4:]         #remanining unsent ones
             toSend = segments[0:4]          #Due to python indexing, this could be from 1-4

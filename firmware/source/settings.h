@@ -10,7 +10,7 @@
 
 /////// Radio settings ///////
 //////////// NKOHUT ///////////
-#define RADIO_CHANNEL		0x14
+#define RADIO_CHANNEL		0x19
 //#warning "You have changed the radio channel from 0x0E to something else"
 #define RADIO_SRC_PAN_ID 	0x2060
 #define RADIO_SRC_ADDR 		0x2052

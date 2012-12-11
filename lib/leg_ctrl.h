@@ -1,7 +1,8 @@
 #ifndef __LEG_CTRL_H
 #define __LEG_CTRL_H
 
-#define HALFTHROT 2000
+//#define HALFTHROT 2000
+#define HALFTHROT 8000
 #define FULLTHROT 2*HALFTHROT
 //#define MAXTHROT 3976
 #define SATTHROT (int)((3976.0/4000.0)*(float)FULLTHROT)

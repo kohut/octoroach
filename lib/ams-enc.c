@@ -51,12 +51,16 @@
 #define ENC_ADDR_L_RD 0b10000101		//A2 on AS5048B Pulled High, A1 Low
 #define ENC_ADDR_L_WR 0b10000100
 
-#define ENC_ADDR_AUX1_RD 0b10000001		//A1, A2 = low
-#define ENC_ADDR_AUX1_WR 0b10000000
+//#define ENC_ADDR_AUX1_RD 0b10000001		//A1, A2 = low //comment 11/8/12
+//#define ENC_ADDR_AUX1_WR 0b10000000
 
 #define LSB2ENCDEG 0.0219
 
 #define ENC_I2C_CHAN        1 //Encoder is on I2C channel 1
+
+//#define ZEROANGLE 338.1
+//#define ZEROANGLE 330.1
+#define ZEROANGLE 159.2
 
 typedef struct {
     unsigned short RPOS; //Leg position struct
@@ -164,24 +168,38 @@ float encGetAux1Pos(void) {
     float apos;
 
     i2cStartTx(ENC_I2C_CHAN); //read first register
-    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_WR);
+    //i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_WR);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_L_WR);
     i2cSendByte(ENC_I2C_CHAN, 0xFE);
     i2cEndTx(ENC_I2C_CHAN);
     i2cStartTx(ENC_I2C_CHAN);
-    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_RD);
+    //i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_RD);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_L_RD);
     enc_data_r1 = i2cReceiveByte(ENC_I2C_CHAN);
     i2cEndTx(ENC_I2C_CHAN);
 
     i2cStartTx(ENC_I2C_CHAN); //read second register
-    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_WR);
+    //i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_WR);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_L_WR);
     i2cSendByte(ENC_I2C_CHAN, 0xFF);
     i2cEndTx(ENC_I2C_CHAN);
     i2cStartTx(ENC_I2C_CHAN);
-    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_RD);
+    //i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_AUX1_RD);
+    i2cSendByte(ENC_I2C_CHAN, ENC_ADDR_L_RD);
     enc_data_r2 = i2cReceiveByte(ENC_I2C_CHAN);
     i2cEndTx(ENC_I2C_CHAN);
 
     apos = ((enc_data_r2 << 6)+(enc_data_r1 & 0x3F)) * LSB2ENCDEG; //concatenate registers
+
+    apos = apos - ZEROANGLE;
+
+	/* from ZEROANGLE = 338
+         * if (apos <= -180.0){
+		apos = apos + 360.0;
+	}*/
+        if (apos >= 180.0){
+		apos = apos - 360.0;
+	}
 
     return apos;
 }
