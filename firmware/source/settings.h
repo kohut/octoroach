@@ -8,7 +8,7 @@
 #define __SETTINGS_H
 
 
-#warning "REQUIRED: Review and set radio channel & network parameters in firmware/source/settings.h  , then comment out this line."
+//#warning "REQUIRED: Review and set radio channel & network parameters in firmware/source/settings.h  , then comment out this line."
 /////// Radio settings ///////
 //////////// NKOHUT ///////////
 #define RADIO_CHANNEL		0x19
