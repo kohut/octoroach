@@ -296,7 +296,8 @@ static void serviceTailPID() {
         int temp = 0;
         temp = tailPID.input; //Save unscaled input val
         tailPID.input *= TAIL_PID_SCALER; //Scale input
-        pidUpdate(&tailPID,
+
+        pidUpdateRotary(&tailPID,
                  TAIL_PID_SCALER * encAngle); //Update with scaled feedback, sets tailPID.output
        tailPID.input = temp;  //Reset unscaled input
 		
