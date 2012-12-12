@@ -9,3 +9,5 @@ build
 dist
 version-string.h
 *.m
+*.asv
+*.fig
