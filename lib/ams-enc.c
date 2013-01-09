@@ -58,9 +58,9 @@
 
 #define ENC_I2C_CHAN        1 //Encoder is on I2C channel 1
 
-//#define ZEROANGLE 338.1
-//#define ZEROANGLE 330.1
-#define ZEROANGLE 159.2
+
+//#define ZEROANGLE 159.2
+#define ZEROANGLE 38.0
 
 typedef struct {
     unsigned short RPOS; //Leg position struct
@@ -192,14 +192,16 @@ float encGetAux1Pos(void) {
     apos = ((enc_data_r2 << 6)+(enc_data_r1 & 0x3F)) * LSB2ENCDEG; //concatenate registers
 
     apos = apos - ZEROANGLE;
+//from zeroangle = 338
+   /* if (apos <= -180.0){
+        apos = apos + 360.0;
+    }*/
+ //from zeroangle = 38
+    if (apos <= -180.0){
+        apos = apos + 360.0;}
+     else if (apos > 180.0){
+            apos = apos - 360.0;}
 
-	/* from ZEROANGLE = 338
-         * if (apos <= -180.0){
-		apos = apos + 360.0;
-	}*/
-        if (apos >= 180.0){
-		apos = apos - 360.0;
-	}
 
     return apos;
 }
