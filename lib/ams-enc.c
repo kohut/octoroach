@@ -60,7 +60,7 @@
 
 
 //#define ZEROANGLE 159.2
-#define ZEROANGLE 38.0
+#define ZEROANGLE 35.0
 
 typedef struct {
     unsigned short RPOS; //Leg position struct

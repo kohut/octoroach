@@ -195,8 +195,10 @@ void hallSetup() {
     }
 
     // Controller to PWM channel correspondance
-    hallOutputChannels[0] = MC_CHANNEL_PWM1;
-    hallOutputChannels[1] = MC_CHANNEL_PWM2;
+    //hallOutputChannels[0] = MC_CHANNEL_PWM1;
+    //hallOutputChannels[1] = MC_CHANNEL_PWM2;
+    hallOutputChannels[0] = MC_CHANNEL_PWM1; //modified for IP 2.4 w/ H bridge
+    hallOutputChannels[1] = MC_CHANNEL_PWM4;
 
     //Init for velocity profile objects
     hallInitPIDVelProfile();
@@ -245,7 +247,9 @@ void hallInitPIDVelProfile() {
         hallPIDVel[j].index = 0; // point to first velocity
         hallPIDVel[j].interpolate = 0;
         hallPIDVel[j].leg_stride = 0; // set initial leg count
-        // set control intervals during stride - try to get close to 21.3 ratio (use 42 counts)
+        // set control intervals during stride - using 32 counts
+        // IS THIS 32 COUNTS??? LOOKS LIKE 42
+        /////////////////////////////////////
         hallPIDVel[j].interval[0] = (4 * STRIDE_TICKS / NUM_VELS / 3);
         hallPIDVel[j].delta[0] = 11;
         hallPIDVel[j].interval[1] = (2 * STRIDE_TICKS / NUM_VELS / 3);
@@ -416,17 +420,18 @@ static void hallSetControl() {
             //Might want to change this in the future, if we want to track error
             //even when the motor is off.
             //Set PWM duty cycle
+            //CHANGE TO 1 and 4 FOR TAIL
             if (j == 0) { // PWM1.L
                 SetDCMCPWM(MC_CHANNEL_PWM1, hallPIDObjs[0].output, 0); //PWM1.L
             } else if (j == 1) { // PWM2.l
-                SetDCMCPWM(MC_CHANNEL_PWM2, hallPIDObjs[1].output, 0); // PWM2.L
+                SetDCMCPWM(MC_CHANNEL_PWM4, hallPIDObjs[1].output, 0); // PWM2.L
             }
         }//end of if (on / off)
         else { //if PID loop is off
             if (j == 0) {
                 SetDCMCPWM(MC_CHANNEL_PWM1, 0, 0);
             } else if (j == 1) {
-                SetDCMCPWM(MC_CHANNEL_PWM2, 0, 0);
+                SetDCMCPWM(MC_CHANNEL_PWM4, 0, 0);
             }
         }
     } // end of for(j)

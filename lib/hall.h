@@ -11,8 +11,8 @@
 #define GAIN_SCALER         100
 #define NUM_PIDS	2
 #define NUM_VELS	4 // 8 velocity setpoints per cycle
-// actual gear ratio 21.3:1. So with 2 counts/rev, get 42.6:1
-#define COUNT_REVS  42   // depends on gear ratio- counts per leg rev
+// actual gear ratio 16:1. So with 2 counts/rev, get 32:1
+#define COUNT_REVS  32   // depends on gear ratio- counts per leg rev
 // STRIDE_TICKS should be easily divisible
 #define STRIDE_TICKS (COUNT_REVS*16)  // number of t1 ticks/leg revolution
 

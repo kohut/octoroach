@@ -196,11 +196,11 @@ static void telemISRHandler() {
             /////// Get XL data
 
             data.telemStruct.sampleIndex = sampIdx;
-            data.telemStruct.timeStamp = sclockGetTime() - telemStartTime;
+            data.telemStruct.timeStamp = sclockGetTime() - telemStartTime; //1
             data.telemStruct.inputL = motor_pidObjs[0].input;
             data.telemStruct.inputR = motor_pidObjs[1].input;
-            data.telemStruct.dcL = PDC3; //For IP2.4 modified to use Hbridge
-            data.telemStruct.dcR = PDC4; //For IP2.4 modified to use Hbridge
+            data.telemStruct.dcL = PDC1; //For IP2.4 modified to use Hbridge
+            data.telemStruct.dcR = PDC4; //For IP2.4 modified to use Hbridge //5
             //data.telemStruct.dcL = PDC1;
             //data.telemStruct.dcR = PDC2;
             data.telemStruct.gyroX = imuGetGyroXValue();
@@ -214,19 +214,19 @@ static void telemISRHandler() {
             data.telemStruct.accelY = xldata[1];
             data.telemStruct.accelZ = xldata[2]; */
 
-            data.telemStruct.accelX = 0;
+            data.telemStruct.accelX = 0; //10
             data.telemStruct.accelY = 0;
             data.telemStruct.accelZ = 0;
 
 
             data.telemStruct.bemfL = bemf[0];
             data.telemStruct.bemfR = bemf[1];
-            data.telemStruct.tailTorque = tailTorque;
+            data.telemStruct.tailTorque = tailTorque; //15
             data.telemStruct.Vbatt = adcGetVBatt();
             data.telemStruct.steerAngle = tailPID.input;
             data.telemStruct.tailAngle = lastTailPos;
             data.telemStruct.bodyPosition = imuGetBodyZPositionDeg();
-            data.telemStruct.motor_count[0] = motor_count[0];
+            data.telemStruct.motor_count[0] = motor_count[0]; //20
             data.telemStruct.motor_count[1] = motor_count[1];
             data.telemStruct.sOut = steeringPID.output;
             telemSaveData(&data);

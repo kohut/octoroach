@@ -93,6 +93,7 @@ static void tailCtrlServiceRoutine(void) {
 }
 
 static void SetupTimer1(void) {
+    
     unsigned int T1CON1value, T1PERvalue;
     T1CON1value = T1_ON & T1_SOURCE_INT & T1_PS_1_1 & T1_GATE_OFF &
             T1_SYNC_EXT_OFF & T1_IDLE_CON;

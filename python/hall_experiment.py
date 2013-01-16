@@ -32,13 +32,13 @@ RESET_ROBOT = True
 # now uses back emf velocity as d term
 motorgains = [400,0,400,0,200, 400,0,200,0,200]
 throttle = [0,0]
-duration = 42*16 - 1 # 21.3 gear ratio, 2 counts/rev
+duration = 32*16 - 1 # 16:1 gear ratio, 2 counts/rev
 # velocity profile
 # [time intervals for setpoints]
 # [position increments at set points]
 # [velocity increments]   muliplied by 256
 #intervals = [0xe0, 0x70, 0xe0, 0x70]  # total 672 ms, = 16 ms per half rev
-delta = [11,10,10,11]  # adds up to 42 counts- should be 42.6
+delta = [8,8,8,8]  # adds up to 32 counts
 #intervals = [0x11e, 0x32, 0x32, 0x11e]  # total 672 ms, = 16 ms per half rev
 #vel = [9,51,51,9]
 intervals = [0x8f, 0x19, 0x19, 0x8f]  # total 336 ms

@@ -69,12 +69,12 @@ int main(void) {
     cmdSetup();
     adcSetup();
     telemSetup(); //Timer 5
-    encSetup();
+    encSetup(); 
     imuSetup();
 
     #ifdef  HALL_SENSORS
     hallSetup();    // Timer 1, Timer 2
-    hallSteeringSetup(); //doesn't exist yet
+    //hallSteeringSetup(); //doesn't exist yet
     #else //No hall sensors, standard BEMF control
     legCtrlSetup(); // Timer 1
     steeringSetup();  //Timer 5
