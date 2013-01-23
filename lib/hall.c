@@ -417,8 +417,8 @@ static void hallServiceRoutine(void)
         hallPIDObjs[0].onoff = 0;
         //	hallPIDSetInput(1, 0, 0);
         hallPIDObjs[1].onoff = 0;
-        SetDCMCPWM(2,0,0);  //Set Sync LED on H-Bridge
-        SetDCMCPWM(3,0,0);
+        //SetDCMCPWM(2,0,0);  //Set Sync LED on H-Bridge
+        //SetDCMCPWM(3,0,0);
     } else // update velocity setpoints if needed - only when running
     {
 	if(temp <= lastRampTime){
@@ -438,8 +438,8 @@ static void hallServiceRoutine(void)
         hallGetSetpoint(0);
         ramp = 0;
 	}
-		SetDCMCPWM(2,0xffff,0); //Set Sync LED on H-Bridge
-		SetDCMCPWM(3,0,0);
+		//SetDCMCPWM(2,0xffff,0); //Set Sync LED on H-Bridge
+		//SetDCMCPWM(3,0,0);
     }
 
     hallUpdateBEMF();
@@ -541,8 +541,8 @@ static void hallSetControl(char ramp) {
      }//end of if (on / off)
         else { //if PID loop is off
             SetDCMCPWM(hallOutputChannels[0], 0, 0);
-		SetDCMCPWM(hallOutputChannels[1], 0, 0);
-		phase_error_sum = 0;
+            SetDCMCPWM(hallOutputChannels[1], 0, 0);
+            phase_error_sum = 0;
         }
 }
 

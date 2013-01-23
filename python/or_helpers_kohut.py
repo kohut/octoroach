@@ -54,7 +54,12 @@ class hallParams:
         self.duration = duration
         self.delta = delta
         self.intervals = intervals
-        self.vel = vel
+        #vel is strictly a function of delta and durations
+        self.vel = [0,0,0,0]
+        for i in range(0,4):
+            self.vel[i] = (self.delta[i] <<8)/self.intervals[i]
+        self.cyclePeriod = sum(self.intervals)
+        self.legFrequency = 1000.0 /self.cyclePeriod
 
 
 class Robot:
@@ -358,11 +363,17 @@ class Robot:
             filenum = filenum[-1] + 1
             self.dataFileName = "imudata" + str(filenum) + ".txt"
             
-    def proceed(self, params):
-        thrust = [params.throttle[0], params.duration, params.throttle[1], params.duration, 0]
-        self.tx(0, command.SET_THRUST_HALL, pack('5h',*thrust))
-        print "Throttle = ",params.throttle,"duration =", params.duration
-        #time.sleep(0.1)
+#    def proceed(self, params):
+#        thrust = [params.throttle[0], params.duration, params.throttle[1], params.duration, 0]
+#        self.tx(0, command.SET_THRUST_HALL, pack('5h',*thrust))
+#        print "Throttle = ",params.throttle,"duration =", params.duration
+#        #time.sleep(0.1)
+
+    def hallProceed(self, params):
+        thrust = [params.throttle[0], params.duration, params.throttle[1], params.duration]
+        self.tx(0, command.SET_THRUST_HALL, pack('4h',*thrust))
+        print "Frequency = ",params.legFrequency,"duration =", params.duration
+        time.sleep(0.1)
         
         #set velocity profile
     def setVelProfile(self, params):

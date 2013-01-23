@@ -91,7 +91,7 @@ static void cmdZeroPos(unsigned char status, unsigned char length, unsigned char
 static void cmdSetHallGains(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetTailQueue(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetTailGains(unsigned char status, unsigned char length, unsigned char *frame);
-//static void cmdSetThrustHall(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdSetThrustHall(unsigned char status, unsigned char length, unsigned char *frame);
 
 /*-----------------------------------------------------------------------------
  *          Public functions
@@ -136,7 +136,7 @@ void cmdSetup(void) {
     cmd_func[CMD_SET_HALL_GAINS] = &cmdSetHallGains;
     cmd_func[CMD_SET_TAIL_QUEUE] = &cmdSetTailQueue;
     cmd_func[CMD_SET_TAIL_GAINS] = &cmdSetTailGains;
-//    cmd_func[CMD_SET_THRUST_HALL] = &cmdSetThrustHall;
+    cmd_func[CMD_SET_THRUST_HALL] = &cmdSetThrustHall;
 
     //Set up command length vector
     /*cmd_len[CMD_SET_THRUST_OPENLOOP] = LEN_CMD_SET_THRUST_OPENLOOP;
@@ -370,6 +370,26 @@ static void cmdSetThrustClosedLoop(unsigned char status, unsigned char length, u
     legCtrlSetInput(LEG_CTRL_RIGHT, argsPtr->chan2);
     legCtrlOnOff(LEG_CTRL_RIGHT, PID_ON); //Motor PID #2 -> ON
 }
+/*
+static void cmdSetThrustClosedLoop(unsigned char status, unsigned char length, unsigned char *frame) {
+#ifdef HALL_SENSORS
+    PKT_UNPACK(_args_cmdSetThrustClosedLoop, argsPtr, frame);
+
+    hallPIDSetInput(0 , argsPtr->chan1, argsPtr->runtime1, 1);
+    hallPIDOn(0);
+    hallPIDSetInput(1 , argsPtr->chan1, argsPtr->runtime2, 1);
+    hallPIDOn(1);
+#else
+    PKT_UNPACK(_args_cmdSetThrustClosedLoop, argsPtr, frame);
+
+    legCtrlSetInput(LEG_CTRL_LEFT, argsPtr->chan1);
+    legCtrlOnOff(LEG_CTRL_LEFT, PID_ON); //Motor PID #1 -> ON
+
+    legCtrlSetInput(LEG_CTRL_RIGHT, argsPtr->chan2);
+    legCtrlOnOff(LEG_CTRL_RIGHT, PID_ON); //Motor PID #2 -> ON
+#endif
+}
+  */
 
 static void cmdSetPIDGains(unsigned char status, unsigned char length, unsigned char *frame) {
     PKT_UNPACK(_args_cmdSetPIDGains, argsPtr, frame);
@@ -613,13 +633,13 @@ static void cmdSetTailGains(unsigned char status, unsigned char length, unsigned
     radioSendPayload(macGetDestAddr(), pld);
 }
 
-/*
+
 static void cmdSetThrustHall(unsigned char status, unsigned char length, unsigned char *frame) {
     PKT_UNPACK(_args_cmdSetThrustHall, argsPtr, frame);
 
-    hallPIDSetInput(0 , argsPtr->chan1, argsPtr->runtime1);
+    hallPIDSetInput(0 , argsPtr->chan1, argsPtr->runtime1, 1);
     hallPIDOn(0);
-    hallPIDSetInput(1 , argsPtr->chan1, argsPtr->runtime2);
+    hallPIDSetInput(1 , argsPtr->chan1, argsPtr->runtime2, 1);
     hallPIDOn(1);
 }
-  */
+  

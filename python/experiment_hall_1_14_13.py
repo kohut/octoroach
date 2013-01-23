@@ -43,7 +43,7 @@ def main():
     # motorgains = [200,2,0,2,0,    200,2,0,2,0]
     # [Kp Ki Kd Kanti-wind ff]
     # now uses back emf velocity as d term
-    motorgains = [400,0,400,0,200, 400,0,200,0,200]
+    motorgains = [300,0,300,0,600, 300,0,300,0,600]
     throttle = [0,0]
     #duration = 10*(32*16 - 1) # 21.3 gear ratio, 2 counts/rev
     cycle_length = 248 #ms
@@ -151,7 +151,7 @@ def main():
     print "  ***************************"
     raw_input("  Press ENTER to start run ...")
     print params
-    R1.proceed(params)
+    
     print ""
     
     # Trigger telemetry save, which starts as soon as it is received
@@ -169,6 +169,7 @@ def main():
         R1.startTelemetrySave()
 
     time.sleep(R1.leadinTime / 1000.0)
+    R1.hallProceed(params)
     #Send the move queue to the robot; robot will start processing it
     #as soon as it is received
     #R1.sendMoveQueue(moveq1)
