@@ -1,9 +1,11 @@
 // July 14, 2011
 // R. Fearing
 // code for position feedback using hall sensors on left and right motor
+//NEW UPDATE FROM DUNCAN 1/22/13
 
 #include "p33Fxxxx.h"
 #include "led.h"
+//#include "stopwatch.h"
 #include "pid.h"
 #include "hall.h"
 #include "adc_pid.h"
@@ -19,6 +21,8 @@
 #include "incap.h" // input capture
 #include "sys_service.h"
 #include <stdlib.h> // for malloc
+
+#define K_EMF    ((1000/256)* 0.27)//((1000/256)* 182.9/219.6)  // A/D units per hall count per ms, scale by >>8
 
 //Private Functions
 static void SetupTimer1(void);
@@ -37,7 +41,7 @@ static void hallServiceRoutine(void);
 long old_right_time, right_time, right_delta; // time of last event
 // unsigned long tic, toc;
 long old_left_time, left_time, left_delta;
-long motor_count[2]; // 0 = left 1 = right counts on sensor
+unsigned long motor_count[2]; // 0 = left 1 = right counts on sensor
 
 MoveQueue hallMoveq;
 moveCmdT hallCurrentMove, hallIdleMove, hallManualMove;
@@ -56,12 +60,17 @@ pidPos hallPIDObjs[NUM_HALL_PIDS];
 // structure for reference velocity for leg
 hallVelLUT hallPIDVel[NUM_HALL_PIDS];
 
+//Ramp struct for ramp parameters
+hallRampVelLUT hallPIDRampVel[NUM_HALL_PIDS];
+
 // may be glitch in longer missions at rollover
 unsigned long lastMoveTime;
-int seqIndex;
+unsigned long lastRampTime;
+int seqIndex, rampDeficit = 409;
+char rampFlag;
 
-static void hallGetSetpoint();
-static void hallSetControl();
+static void hallGetSetpoint(char ramp);
+static void hallSetControl(char ramp);
 
 ///////////////////////////////////
 /////// Private Functions /////////
@@ -78,21 +87,17 @@ static void SetupTimer1(void)
             T1_SYNC_EXT_OFF & T1_IDLE_CON;
 
     T1PERvalue = 0x9C40; //clock period = 0.001s = (T1PERvalue/FCY) (1KHz)
-    //T1PERvalue = 0x9C40/2;
-    //getT1_ticks() = 0;
-    //OpenTimer1(T1CON1value, T1PERvalue);
-    //ConfigIntTimer1(T1_INT_PRIOR_6 & T1_INT_ON);
     int retval;
     retval = sysServiceConfigT1(T1CON1value, T1PERvalue, T1_INT_PRIOR_6 & T1_INT_ON);
     //TODO: Put a soft trap here, conditional on retval
 }
- 
+
 //Timer 2 counts
 // Set up just to provide a tick counter at 400 Hz
 static void SetupTimer2(void) {
     unsigned int T2CON1value, T2PERvalue;
     T2CON1value = T2_ON & T2_SOURCE_INT & T2_PS_1_256 & T2_GATE_OFF;
-    T2PERvalue = 0xffff; // max period 
+    T2PERvalue = 0xffff; // max period
     int retval;
     retval = sysServiceConfigT2(T2CON1value, T2PERvalue, T2_INT_PRIOR_5 & T2_INT_ON);
     //TODO: Put a soft trap here, conditional on retval
@@ -138,6 +143,7 @@ static void SetupInputCapture() {
 // Input Capture 8: right legs
 // handler for right leg
 void __attribute__((__interrupt__, no_auto_psv)) _IC8Interrupt(void) {
+    //  toc = swatchToc(); // elapsed time since last rising edge
     // Insert ISR code here
     motor_count[0]++; // increment count for right side - neglect overflow/wrap around
     //right_time = (long) IC8BUF + ((long) (t2_ticks) << 16);
@@ -147,6 +153,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _IC8Interrupt(void) {
 
     LED_RED = ~LED_RED;
     IFS1bits.IC8IF = 0; // Clear CN interrupt
+    //  tic = swatchTic();
 }
 
 //handler for left leg
@@ -195,16 +202,14 @@ void hallSetup() {
     }
 
     // Controller to PWM channel correspondance
-    //hallOutputChannels[0] = MC_CHANNEL_PWM1;
-    //hallOutputChannels[1] = MC_CHANNEL_PWM2;
-    hallOutputChannels[0] = MC_CHANNEL_PWM1; //modified for IP 2.4 w/ H bridge
+    hallOutputChannels[0] = MC_CHANNEL_PWM1;
     hallOutputChannels[1] = MC_CHANNEL_PWM4;
 
     //Init for velocity profile objects
     hallInitPIDVelProfile();
 
     //System setup
-    SetupTimer1();
+    SetupTimer1(); // potentially conflicts with legCtrl!
     SetupTimer2(); // used for leg hall effect sensors
     SetupInputCapture(); // setup input capture for hall effect sensors
     int retval;
@@ -225,8 +230,8 @@ void hallSetup() {
 
     lastMoveTime = 0;
     //  initialize PID structures before starting Timer1
-    hallPIDSetInput(0, 0, 0);
-    hallPIDSetInput(1, 0, 0);
+    hallPIDSetInput(0, 0, 0, 1);
+    hallPIDSetInput(1, 0, 0, 1);
 
     for (i = 0; i < NUM_HALL_PIDS; i++) {
         hallbemfLast[i] = 0;
@@ -247,17 +252,15 @@ void hallInitPIDVelProfile() {
         hallPIDVel[j].index = 0; // point to first velocity
         hallPIDVel[j].interpolate = 0;
         hallPIDVel[j].leg_stride = 0; // set initial leg count
-        // set control intervals during stride - using 32 counts
-        // IS THIS 32 COUNTS??? LOOKS LIKE 42
-        /////////////////////////////////////
+        // set control intervals during stride - try to get close to 21.3 ratio (use 42 counts)
         hallPIDVel[j].interval[0] = (4 * STRIDE_TICKS / NUM_VELS / 3);
-        hallPIDVel[j].delta[0] = 11;
+        hallPIDVel[j].delta[0] = 8;
         hallPIDVel[j].interval[1] = (2 * STRIDE_TICKS / NUM_VELS / 3);
-        hallPIDVel[j].delta[1] = 10;
+        hallPIDVel[j].delta[1] = 8;
         hallPIDVel[j].interval[2] = (4 * STRIDE_TICKS / NUM_VELS / 3);
-        hallPIDVel[j].delta[2] = 11;
+        hallPIDVel[j].delta[2] = 8;
         hallPIDVel[j].interval[3] = (2 * STRIDE_TICKS / NUM_VELS / 3);
-        hallPIDVel[j].delta[3] = 10;
+        hallPIDVel[j].delta[3] = 8;
         for (i = 0; i < NUM_VELS; i++) { // interpolate values between setpoints, <<4 for resolution
             hallPIDVel[j].vel[i] = (hallPIDVel[j].delta[i] << 8) / hallPIDVel[j].interval[i];
         }
@@ -277,12 +280,52 @@ void hallSetVelProfile(int pid_num, int *interval, int *delta, int *vel) {
     }
 }
 
+void hallSetRampProfile(int pid_num, int *interval, int *delta, int *vel) {
+    int i;
+    for (i = 0; i < NUM_VELS; i++) {
+        hallPIDRampVel[pid_num].interval[i] = interval[i];
+        hallPIDRampVel[pid_num].delta[i] = delta[i];
+        hallPIDRampVel[pid_num].vel[i] = vel[i];
+    }
+	hallPIDRampVel[pid_num].tRamp = 0;//800;		//hardcoded for now; fix later
+}
 
 // called from set thrust closed loop, etc. Thrust
 
-void hallPIDSetInput(int pid_num, int input_val, unsigned int run_time) {
+void hallPIDSetInput(int pid_num, int input_val, unsigned int run_time, char ramp) {
     unsigned long temp;
-    hallPIDObjs[pid_num].v_input = input_val;
+    /*      ******   use velocity setpoint + throttle for compatibility between Hall and Pullin code *****/
+    /* otherwise, miss first velocity set point */
+	temp = getT1_ticks(); // need atomic read due to interrupt
+    lastMoveTime = temp + (unsigned long) run_time; // only one run time for both sides
+    lastRampTime = temp + hallPIDRampVel[0].tRamp;
+	// set initial time for next move set point
+
+	if(ramp){
+		hallPIDObjs[pid_num].v_input = input_val + (int) (hallPIDRampVel[pid_num].vel[0] * K_EMF);
+		    /*   need to set index =0 initial values */
+		/* position setpoints start at 0 (index=0), then interpolate until setpoint 1 (index =1), etc */
+
+		hallPIDRampVel[pid_num].expire = temp + (long) hallPIDRampVel[pid_num].interval[0]; // end of first interval
+		hallPIDRampVel[pid_num].interpolate = 0;
+		/*	pidObjs[pid_num].p_input += pidVel[pid_num].delta[0];	//update to first set point
+		***  this should be set only after first .expire time to avoid initial transients */
+		hallPIDRampVel[pid_num].index = 0; // reset setpoint index
+		rampFlag=0;
+
+	}
+	else
+	{
+    hallPIDObjs[pid_num].v_input = input_val + (int) (hallPIDVel[pid_num].vel[0] * K_EMF); //initialize first velocity ;
+	/*   need to set index =0 initial values */
+    /* position setpoints start at 0 (index=0), then interpolate until setpoint 1 (index =1), etc */
+
+    hallPIDVel[pid_num].expire = temp + (long) hallPIDVel[pid_num].interval[0]; // end of first interval
+    hallPIDVel[pid_num].interpolate = 0;
+    /*	pidObjs[pid_num].p_input += pidVel[pid_num].delta[0];	//update to first set point
+     ***  this should be set only after first .expire time to avoid initial transients */
+    hallPIDVel[pid_num].index = 0; // reset setpoint index
+	}
     hallPIDObjs[pid_num].run_time = run_time;
     hallPIDObjs[pid_num].start_time = getT1_ticks();
     //zero out running PID values
@@ -292,12 +335,12 @@ void hallPIDSetInput(int pid_num, int input_val, unsigned int run_time) {
     hallPIDObjs[pid_num].d = 0;
     //Seed the median filter
 
-    temp = getT1_ticks(); // need atomic read due to interrupt
-    lastMoveTime = temp + (unsigned long) run_time; // only one run time for both sides
-    // set initial time for next move set point
+
+
 
     /*   need to set index =0 initial values */
     /* position setpoints start at 0 (index=0), then interpolate until setpoint 1 (index =1), etc */
+
     hallPIDVel[pid_num].expire = temp + (long) hallPIDVel[pid_num].interval[0]; // end of first interval
     hallPIDVel[pid_num].interpolate = 0;
     /*	pidObjs[pid_num].p_input += pidVel[pid_num].delta[0];	//update to first set point
@@ -325,7 +368,7 @@ void hallSetGains(int pid_num, int Kp, int Ki, int Kd, int Kaw, int Kff) {
     hallPIDObjs[pid_num].Ki = Ki;
     hallPIDObjs[pid_num].Kd = Kd;
     hallPIDObjs[pid_num].Kaw = Kaw;
-    hallPIDObjs[pid_num].Kff = Kff;
+    hallPIDObjs[pid_num].feedforward = Kff;
 }
 
 void hallPIDOn(int pid_num) {
@@ -344,6 +387,7 @@ void hallZeroPos(int pid_num) {
     EnableIntIC8;
     // reset position setpoint as well
     hallPIDObjs[pid_num].p_input = 0;
+    hallPIDObjs[pid_num].v_input = 0; //RF4 change
     hallPIDVel[pid_num].leg_stride = 0; // strides also reset
 }
 
@@ -363,23 +407,76 @@ static void hallServiceRoutine(void)
     LED_GREEN = _RB4;
     LED_RED = _RB5;
 
-    if (getT1_ticks() > lastMoveTime) // turn off if done running
+    unsigned long temp = getT1_ticks();
+    char ramp;
+
+     if (temp >= lastMoveTime)
+ //   if ((temp >= lastMoveTime)
+//            && ((hallPIDObjs[0].onoff == PID_ON) || (hallPIDObjs[1].onoff == PID_ON)) )  // turn off if done running
     { //	hallPIDSetInput(0, 0, 0);    don't reset state when done run, keep for recording telemetry
         hallPIDObjs[0].onoff = 0;
         //	hallPIDSetInput(1, 0, 0);
         hallPIDObjs[1].onoff = 0;
+        SetDCMCPWM(2,0,0);  //Set Sync LED on H-Bridge
+        SetDCMCPWM(3,0,0);
     } else // update velocity setpoints if needed - only when running
     {
-        hallGetSetpoint();
+	if(temp <= lastRampTime){
+            ramp = 1;
+		hallGetSetpoint(ramp);
+	} else
+	{
+	if(rampFlag == 0){
+		hallPIDVel[0].expire = temp + (long) hallPIDVel[0].interval[0]; // end of first interval
+		hallPIDVel[0].interpolate = 0;
+		hallPIDVel[0].index = 0;
+		hallPIDVel[1].expire = temp + (long) hallPIDVel[1].interval[0]; // end of first interval
+		hallPIDVel[1].interpolate = 0;
+		hallPIDVel[1].index = 0;
+		rampFlag = 1;
+	}
+        hallGetSetpoint(0);
+        ramp = 0;
+	}
+		SetDCMCPWM(2,0xffff,0); //Set Sync LED on H-Bridge
+		SetDCMCPWM(3,0,0);
     }
 
     hallUpdateBEMF();
-    hallSetControl();
+    hallSetControl(ramp);
 }
 
-static void hallGetSetpoint() {
+static void hallGetSetpoint(char ramp) {
     int j, index;
+	if(ramp){	//Use ramp parameters
+	    for (j = 0; j < NUM_HALL_PIDS; j++) {
+        index = hallPIDRampVel[j].index;
+        // update desired position between setpoints, scaled by 256
+        hallPIDRampVel[j].interpolate += hallPIDRampVel[j].vel[index];
 
+        if (getT1_ticks() >= hallPIDRampVel[j].expire) // time to reach previous setpoint has passed
+        {
+            hallPIDRampVel[j].interpolate = 0;
+            hallPIDObjs[j].p_input += hallPIDRampVel[j].delta[index]; //update to next set point
+            hallPIDRampVel[j].expire += hallPIDRampVel[j].interval[(index + 1) % NUM_RVELS]; // expire time for next interval
+            hallPIDObjs[j].v_input = (int) (hallPIDRampVel[j].vel[(index + 1) % NUM_RVELS] * K_EMF); //update to next velocity
+            // got to next index point
+            hallPIDRampVel[j].index++;
+
+            if (hallPIDRampVel[j].index >= NUM_RVELS) {
+                hallPIDRampVel[j].index = 0;
+                hallPIDRampVel[j].leg_stride++; // one full leg revolution
+                // need to correct for 426 counts per leg stride
+                // 5 rev @ 42 counts/rev = 210, actual set point 5 rev @ 42.6 counts, so add 3 to p_input
+                // if ((hallPIDRampVel[j].leg_stride % 5) == 0) {
+                    // hallPIDObjs[j].p_input += 3;
+                // }
+            } // loop on index
+
+        }
+    }
+	} else
+	{
     for (j = 0; j < NUM_HALL_PIDS; j++) {
         index = hallPIDVel[j].index;
         // update desired position between setpoints, scaled by 256
@@ -390,6 +487,7 @@ static void hallGetSetpoint() {
             hallPIDVel[j].interpolate = 0;
             hallPIDObjs[j].p_input += hallPIDVel[j].delta[index]; //update to next set point
             hallPIDVel[j].expire += hallPIDVel[j].interval[(index + 1) % NUM_VELS]; // expire time for next interval
+            hallPIDObjs[j].v_input = (int) (hallPIDVel[j].vel[(index + 1) % NUM_VELS] * K_EMF); //update to next velocity
             // got to next index point
             hallPIDVel[j].index++;
 
@@ -398,43 +496,54 @@ static void hallGetSetpoint() {
                 hallPIDVel[j].leg_stride++; // one full leg revolution
                 // need to correct for 426 counts per leg stride
                 // 5 rev @ 42 counts/rev = 210, actual set point 5 rev @ 42.6 counts, so add 3 to p_input
-                if ((hallPIDVel[j].leg_stride % 5) == 0) {
-                    hallPIDObjs[j].p_input += 3;
-                }
-            } // loop on index
-        }
-    }
+                // if ((hallPIDVel[j].leg_stride % 5) == 0) {
+                    // hallPIDObjs[j].p_input += 3;
+                // }
+				} // loop on index
+
+			}
+		}
+	}
 }
 
-static void hallSetControl() {
+static void hallSetControl(char ramp) {
     int j;
+	int phase_error;
+
+	static int phase_error_sum = 0;
+
+	phase_error = motor_count[0]-motor_count[1];
+	phase_error_sum += phase_error;
+
+	hallPIDObjs[0].phase_offset = -phase_error*hallPIDObjs[0].feedforward - phase_error_sum*20;
+	hallPIDObjs[1].phase_offset = phase_error*hallPIDObjs[1].feedforward + phase_error_sum*20;
+
     // 0 = right side
     for (j = 0; j < NUM_HALL_PIDS; j++) { //pidobjs[0] : right side
         // p_input has scaled velocity interpolation to make smoother
-        hallPIDObjs[j].p_error = hallPIDObjs[j].p_input + (hallPIDVel[j].interpolate >> 8) - motor_count[j];
-        //hallPIDObjs[j].v_error = hallPIDObjs[j].v_input - measurements[j];
+	if(ramp){
+		hallPIDObjs[j].p_error = hallPIDObjs[j].p_input + (hallPIDRampVel[j].interpolate >> 8) - motor_count[j];
+		} else
+		{
+			hallPIDObjs[j].p_error = hallPIDObjs[j].p_input + (hallPIDVel[j].interpolate >> 8) - motor_count[j];
+		}
         hallPIDObjs[j].v_error = hallPIDObjs[j].v_input - hallbemf[j];
         //Update values
         hallUpdatePID(&(hallPIDObjs[j]));
-        if (hallPIDObjs[j].onoff) {
-            //Might want to change this in the future, if we want to track error
-            //even when the motor is off.
-            //Set PWM duty cycle
-            //CHANGE TO 1 and 4 FOR TAIL
-            if (j == 0) { // PWM1.L
-                SetDCMCPWM(MC_CHANNEL_PWM1, hallPIDObjs[0].output, 0); //PWM1.L
-            } else if (j == 1) { // PWM2.l
-                SetDCMCPWM(MC_CHANNEL_PWM4, hallPIDObjs[1].output, 0); // PWM2.L
-            }
-        }//end of if (on / off)
+	}
+
+	if (hallPIDObjs[0].onoff) {
+        //Might want to change this in the future, if we want to track error
+        //even when the motor is off.
+        //Set PWM duty cycle
+		SetDCMCPWM(hallOutputChannels[0], hallPIDObjs[0].output, 0); //PWM1.L
+		SetDCMCPWM(hallOutputChannels[1], hallPIDObjs[1].output, 0); //PWM1.L
+     }//end of if (on / off)
         else { //if PID loop is off
-            if (j == 0) {
-                SetDCMCPWM(MC_CHANNEL_PWM1, 0, 0);
-            } else if (j == 1) {
-                SetDCMCPWM(MC_CHANNEL_PWM4, 0, 0);
-            }
+            SetDCMCPWM(hallOutputChannels[0], 0, 0);
+		SetDCMCPWM(hallOutputChannels[1], 0, 0);
+		phase_error_sum = 0;
         }
-    } // end of for(j)
 }
 
 static void hallUpdatePID(pidPos *pid) {
@@ -444,8 +553,9 @@ static void hallUpdatePID(pidPos *pid) {
     // better check scale factors
     /* just use simpled PID, offset is already subtracted in PID GetState */
     // scale so doesn't over flow
-    pid->preSat = pid->Kff + pid->p +
+    pid->preSat = pid->phase_offset + pid->p +          //Note Hall-specific software PID update uses direct ff, not Kff gain
             ((pid->i + pid->d) >> 4); // divide by 16
+
     pid->output = pid->preSat;
     //Clamp output above 0 since don't have H bridge
     if (pid->preSat < pid->minVal) {
@@ -502,7 +612,7 @@ static void hallUpdateBEMF() {
 ////   Public functions
 ////////////////////////
 
-void hallInitPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int Kff) {
+void hallInitPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int feedforward) {
     pid->p_input = 0;
     pid->v_input = 0;
     pid->p = 0;
@@ -512,7 +622,7 @@ void hallInitPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int Kff) {
     pid->Ki = Ki;
     pid->Kd = Kd;
     pid->Kaw = Kaw;
-    pid->Kff = Kff;
+    pid->feedforward = feedforward; //NOT a gain here, direct ff term
     pid->output = 0;
     pid->onoff = 0;
     pid->p_error = 0;
@@ -522,7 +632,7 @@ void hallInitPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int Kff) {
 
 // called from steeringSetup()
 
-void hallInitPIDObj(pidObj *pid, int Kp, int Ki, int Kd, int Kaw, int Kff) {
+void hallInitPIDObj(pidObj *pid, int Kp, int Ki, int Kd, int Kaw, int feedforward) {
     pid->input = 0;
     pid->dState = 0;
     pid->iState = 0;
@@ -537,11 +647,12 @@ void hallInitPIDObj(pidObj *pid, int Kp, int Ki, int Kd, int Kaw, int Kff) {
     pid->Ki = Ki;
     pid->Kd = Kd;
     pid->Kaw = Kaw;
-    pid->Kff = 0;
+    pid->Kff = feedforward;
     pid->onoff = 0;
     pid->error = 0;
 }
 
-long* hallGetMotorCounts() {
-    return motor_count;
+void hallGetMotorCounts(unsigned long* dest) {
+    dest[0] = motor_count[0];
+    dest[1] = motor_count[1];
 }

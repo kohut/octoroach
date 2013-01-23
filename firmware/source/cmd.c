@@ -91,7 +91,7 @@ static void cmdZeroPos(unsigned char status, unsigned char length, unsigned char
 static void cmdSetHallGains(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetTailQueue(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetTailGains(unsigned char status, unsigned char length, unsigned char *frame);
-static void cmdSetThrustHall(unsigned char status, unsigned char length, unsigned char *frame);
+//static void cmdSetThrustHall(unsigned char status, unsigned char length, unsigned char *frame);
 
 /*-----------------------------------------------------------------------------
  *          Public functions
@@ -136,7 +136,7 @@ void cmdSetup(void) {
     cmd_func[CMD_SET_HALL_GAINS] = &cmdSetHallGains;
     cmd_func[CMD_SET_TAIL_QUEUE] = &cmdSetTailQueue;
     cmd_func[CMD_SET_TAIL_GAINS] = &cmdSetTailGains;
-    cmd_func[CMD_SET_THRUST_HALL] = &cmdSetThrustHall;
+//    cmd_func[CMD_SET_THRUST_HALL] = &cmdSetThrustHall;
 
     //Set up command length vector
     /*cmd_len[CMD_SET_THRUST_OPENLOOP] = LEN_CMD_SET_THRUST_OPENLOOP;
@@ -526,8 +526,11 @@ static void cmdSetVelProfile(unsigned char status, unsigned char length, unsigne
 // note motor_count is long (4 bytes)
 void cmdZeroPos(unsigned char status, unsigned char length, unsigned char *frame) {
 
+    unsigned long mcounts[2];
+    hallGetMotorCounts(mcounts);
+
     radioSendPayload(macGetDestAddr(), payCreate(2*sizeof(long),
-            (unsigned char *)(hallGetMotorCounts()), status, CMD_ZERO_POS));
+            (unsigned char *)(mcounts), status, CMD_ZERO_POS));
     hallZeroPos(0);
     hallZeroPos(1);
 }
@@ -610,7 +613,7 @@ static void cmdSetTailGains(unsigned char status, unsigned char length, unsigned
     radioSendPayload(macGetDestAddr(), pld);
 }
 
-
+/*
 static void cmdSetThrustHall(unsigned char status, unsigned char length, unsigned char *frame) {
     PKT_UNPACK(_args_cmdSetThrustHall, argsPtr, frame);
 
@@ -619,3 +622,4 @@ static void cmdSetThrustHall(unsigned char status, unsigned char length, unsigne
     hallPIDSetInput(1 , argsPtr->chan1, argsPtr->runtime2);
     hallPIDOn(1);
 }
+  */

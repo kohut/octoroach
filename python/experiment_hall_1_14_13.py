@@ -46,7 +46,8 @@ def main():
     motorgains = [400,0,400,0,200, 400,0,200,0,200]
     throttle = [0,0]
     #duration = 10*(32*16 - 1) # 21.3 gear ratio, 2 counts/rev
-    duration = 10*336
+    cycle_length = 248 #ms
+    duration = 20*cycle_length # num of cycles you want to run
     # velocity profile
     # [time intervals for setpoints]
     # [position increments at set points]
@@ -55,10 +56,10 @@ def main():
     delta = [8,8,8,8]  # adds up to 32 counts (16*2)
     #intervals = [0x11e, 0x32, 0x32, 0x11e]  # total 672 ms, = 16 ms per half rev
     #vel = [9,51,51,9]
-    intervals = [0x8f, 0x19, 0x19, 0x8f]  # total 336 ms [143, 25, 25,143]
+    intervals = [cycle_length/4, cycle_length/4, cycle_length/4, cycle_length/4]  # need to figure out rounding...
     #intervals = [100, 100, 100, 100]
-    vel = [17,112,112,17]
-    #vel = [0, 0, 0, 0]
+    #vel = [17,112,112,17]
+    vel = [0, 0, 0, 0]
     
     R1.setHallGains(motorgains, retries = 8)
     #Verify all robots have motor gains set
@@ -160,7 +161,7 @@ def main():
     
     ####### Initialize tail before experiment
     #R1.sendTailQueue(tailq_init)
-    time.sleep(2.0)
+    #time.sleep(2.0)
     ##################
     
     
